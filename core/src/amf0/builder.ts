@@ -86,6 +86,14 @@ const buildValue = (data: any): ArrayBuffer => {
       0,
       ... new Uint8Array(buildDate(data))
     ]).buffer;  
+  } else if (data === null) {
+    return Uint8Array.from([
+      5
+    ]).buffer;
+  } else if (data === undefined) {
+    return Uint8Array.from([
+      6
+    ]).buffer;
   }
 
   switch (typeof data) {

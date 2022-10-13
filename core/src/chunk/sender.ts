@@ -1,7 +1,7 @@
 import concat from "../util/binary";
 import { Chunk } from "./parse";
 
-const MESSAGE_SIZE = 128 - 16;
+const MESSAGE_SIZE = 4500 - 16; // FIXME: more smaller than better
 
 export default (chunk: Omit<Chunk, 'message_length'>): ArrayBuffer[] => {
   const message = concat(chunk.message);

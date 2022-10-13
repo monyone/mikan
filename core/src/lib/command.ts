@@ -61,7 +61,7 @@ export const generateSetChunkSize = (time: number, size: number): ArrayBuffer[] 
 
 export const generateConnectResult = (time: number, transaction_id: number): ArrayBuffer[] => {
   return buildChunk({
-    chunk_stream_id: 2,
+    chunk_stream_id: 3,
     timestamp: time,
     message_type_id: 20,
     message_stream_id: 0,
@@ -77,6 +77,44 @@ export const generateConnectResult = (time: number, transaction_id: number): Arr
       },
       objectEncoding: 0,
       level: 'status',
+    })
+  });
+}
+
+export const generateOnFCPublish = (time: number, transaction_id: number, name: string, stream_id: number): ArrayBuffer[] => {
+  return buildChunk({
+    chunk_stream_id: 3,
+    timestamp: time,
+    message_type_id: 20,
+    message_stream_id: 0,
+    message: buildAMF('onFCPublish', transaction_id, null, stream_id, {
+      code: 'NetStream.Publish.Start',
+      description: `FCPublish to stream ${name}.`,
+      level: 'status',
+    })
+  });
+}
+
+export const generateCreateStreamResult = (time: number, transaction_id: number, stream_id: number): ArrayBuffer[] => {
+  return buildChunk({
+    chunk_stream_id: 3,
+    timestamp: time,
+    message_type_id: 20,
+    message_stream_id: 0,
+    message: buildAMF('_result', transaction_id, null, stream_id)
+  });
+}
+
+export const generateOnStatusPublish = (time: number, transaction_id: number, name: string): ArrayBuffer[] => {
+  return buildChunk({
+    chunk_stream_id: 3,
+    timestamp: time,
+    message_type_id: 20,
+    message_stream_id: 1,
+    message: buildAMF('onStatus', transaction_id, null, {
+      code: 'NetStream.Publish.Start',
+			description: `Publishing ${name}`,
+			level: 'status'
     })
   });
 }

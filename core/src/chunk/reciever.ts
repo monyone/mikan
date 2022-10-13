@@ -92,19 +92,6 @@ export default class ChunkReciever {
       }
       //*/
 
-      /* FIXME! 
-      const bytes = newInfo.message.reduce((prev, curr) => prev + curr.byteLength, 0);
-      const next = chunk.byteLength;
-      newInfo.message.push(chunk.slice(begin + chunk_header_length, next));
-      if (bytes + (next - begin) >= newInfo.message_length) {
-        binary
-        messages.push(newInfo);
-        this.#chunkInfo.delete(chunk_stream_id);
-      } else {
-        this.#chunkInfo.set(chunk_stream_id, newInfo);
-      }
-      //*/
-
       begin = next;
     }
 

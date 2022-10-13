@@ -4,7 +4,7 @@ import { parseTWO, buildTWO, bulidRandom, parseZERO, buildZERO, parseONE, buildO
 import parseAMF from "../amf0/parser"
 import ChunkReciever from "../chunk/reciever";
 import concat from "../util/binary";
-import { generateConnectResult, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
+import { generateConnectResult, generateCreateStreamResult, generateOnFCPublish, generateOnStatusPublish, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
 
 enum HandshakeState {
   WAITING_ZERO,
@@ -20,6 +20,7 @@ export default class Reader {
   #ownRandom: ArrayBuffer = bulidRandom(1528);
 
   #chunkReciever = new ChunkReciever();
+  #streamName = '';
 
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
@@ -100,10 +101,10 @@ export default class Reader {
         if (!same) { break; }
 
         this.#handshakeState = HandshakeState.ESTABLISHED;
+        chunk = (new Uint8Array(chunk.slice(begin))).filter((e) => e !== 0xC3).buffer
       }
       case HandshakeState.ESTABLISHED: {
-        const filtered = (new Uint8Array(chunk.slice(begin))).filter((e) => e !== 0xC3).buffer
-        for (const info of this.#chunkReciever.readChunk(filtered)) {
+        for (const info of this.#chunkReciever.readChunk(chunk)) {
           const message = concat(info.message);
 
           if (info.message_type_id === 20) { // AMF0
@@ -154,6 +155,37 @@ export default class Reader {
                   });
                 }
 
+                break;
+              }
+              case 'releaseStream': {
+                break;
+              }
+              case 'FCPublish': {
+                this.#streamName = objs[1];
+                for (const chunk of generateOnFCPublish(this.#time, transaction_id, this.#streamName, 1)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+                break;
+              }
+              case 'createStream': {
+                for (const chunk of generateCreateStreamResult(this.#time, transaction_id, 1)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+                break;
+              }
+              case 'publish': {
+                for (const chunk of generateOnStatusPublish(this.#time, transaction_id, this.#streamName)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
                 break;
               }
             }

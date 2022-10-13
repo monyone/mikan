@@ -128,6 +128,18 @@ const parseValue = (data: ArrayBuffer, begin: number): any => {
     case 3: { // Object
       return parseObject(data, begin + 1);
     }
+    case 5: { // null
+      return {
+        value: null,
+        end: begin + 1
+      };
+    }
+    case 6: { // undefined
+      return {
+        value: undefined,
+        end: begin + 1
+      };
+    }
     case 8: { // ECMA array type (Mixed array)
       return parseMixedArray(data, begin + 1);
     }
