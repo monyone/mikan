@@ -1,7 +1,10 @@
 import EventEmitter from "../event/eventemitter";
 import { Events, EventTypes } from "../event/events";
 import { parseTWO, buildTWO, bulidRandom, parseZERO, buildZERO, parseONE, buildONE } from "../lib/initial";
-import AMF from "../amf"
+import parseAMF from "../amf0/parser"
+import ChunkReciever from "../chunk/reciever";
+import concat from "../util/binary";
+import { generateConnectResult, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
 
 enum HandshakeState {
   WAITING_ZERO,
@@ -15,7 +18,8 @@ export default class Reader {
   #handshakeState: HandshakeState = HandshakeState.WAITING_ZERO;
   #time: number = 0;
   #ownRandom: ArrayBuffer = bulidRandom(1528);
-  #senderRandom: ArrayBuffer | null = null;
+
+  #chunkReciever = new ChunkReciever();
 
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
@@ -54,8 +58,6 @@ export default class Reader {
         if (chunk.byteLength < begin + 1536) { break; }
         const ONE = parseONE(chunk.slice(begin, begin + 1536));
         begin += 1536;
-
-        this.#senderRandom = ONE.random;
 
         this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
           event: EventTypes.RTMP_CHUNK_SEND,
@@ -100,58 +102,63 @@ export default class Reader {
         this.#handshakeState = HandshakeState.ESTABLISHED;
       }
       case HandshakeState.ESTABLISHED: {
-        const view = new DataView(chunk);
-        while (begin < chunk.byteLength) {
-          const fmt = view.getUint8(begin + 0) & 0xC00;
-          const chunk_stream_id = view.getUint8(begin + 0) & 0x3F;
+        const filtered = (new Uint8Array(chunk.slice(begin))).filter((e) => e !== 0xC3).buffer
+        for (const info of this.#chunkReciever.readChunk(filtered)) {
+          const message = concat(info.message);
 
-          if (fmt === 0) {
-            let timestamp = (view.getUint8(begin + 1) << 16) || (view.getUint8(begin + 2) << 8) || (view.getUint8(begin + 3) << 0);
-            const message_length = (view.getUint8(begin + 4) << 16) || (view.getUint8(begin + 5) << 8) || (view.getUint8(begin + 6) << 0);
-            const message_type_id = view.getUint8(begin + 7);
-            const message_stream_id = view.getUint32(begin + 8);
+          if (info.message_type_id === 20) { // AMF0
+            const amf = parseAMF(message);
+            
+            if (!Array.isArray(amf)) { continue; }
+            const [name, transaction_id, ... objs] = amf;
 
-            if (timestamp >= 0xFFFFFF) {
-              timestamp = view.getUint32(begin + 12);
+            switch(name) {
+              case 'connect': {
+                // ack
+                for (const chunk of generateWindowAcknowledgementSize(this.#time, 2500000)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
 
-              if (message_type_id === 20) {
-                console.log(AMF(chunk.slice(begin + 16)));
+                // peer
+                for (const chunk of generateSetPeerBandwidth(this.#time, 2500000, 2)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+
+                // user stream
+                for (const chunk of generateUserStreamBegin(this.#time, 0)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+
+                // chunk size
+                for (const chunk of generateSetChunkSize(this.#time, 4500)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+                
+                // result
+                for (const chunk of generateConnectResult(this.#time, transaction_id)) {
+                  this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
+                    event: EventTypes.RTMP_CHUNK_SEND,
+                    chunk
+                  });
+                }
+
+                break;
               }
-              begin = Math.min(begin + 16 + message_length, chunk.byteLength);
-            } else {
-              if (message_type_id === 20) {
-                console.log(AMF(chunk.slice(begin + 12)));
-              }
-              begin = Math.min(begin + 12 + message_length, chunk.byteLength);
             }
-
-
-
-            begin = chunk.byteLength;
-          } else if (fmt === 1) {
-            let timestamp_delta = (view.getUint8(begin + 1) << 16) || (view.getUint8(begin + 2) << 8) || (view.getUint8(begin + 3) << 0);
-            const message_length = (view.getUint8(begin + 4) << 16) || (view.getUint8(begin + 5) << 8) || (view.getUint8(begin + 6) << 0);
-            const message_type_id = view.getUint8(begin + 7);
-
-            if (timestamp_delta >= 0xFFFFFF) {
-              timestamp_delta = view.getUint32(begin + 8);
-              begin = Math.min(begin + 12 + message_length, chunk.byteLength);
-            } else {
-              begin = Math.min(begin + 8 + message_length, chunk.byteLength);
-            }
-
-            begin = chunk.byteLength;
-          } else if (fmt === 2) {
-            let timestamp_delta = (view.getUint8(begin + 1) << 16) || (view.getUint8(begin + 2) << 8) || (view.getUint8(begin + 3) << 0);
-            if (timestamp_delta >= 0xFFFFFF) {
-              timestamp_delta = view.getUint32(begin + 4);
-            }
-            begin = chunk.byteLength;
-          } else if (fmt === 3) {
-            begin = chunk.byteLength;
           }
         }
-
         break;
       }
     }

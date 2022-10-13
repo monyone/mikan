@@ -16,7 +16,6 @@ const server = net.createServer((connection) => {
   reader.start();
   
   connection.on("data", (data) => {
-    console.log(data.byteLength, data.slice(1536))
     emitter.emit(EventTypes.RTMP_CHUNK_RECIEVED, {
       event: EventTypes.RTMP_CHUNK_RECIEVED,
       chunk: data.buffer
