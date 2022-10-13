@@ -5,6 +5,7 @@ import parseAMF from "../amf0/parser"
 import ChunkReciever from "../chunk/reciever";
 import concat from "../util/binary";
 import { generateConnectResult, generateCreateStreamResult, generateOnFCPublish, generateOnStatusPublish, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
+import flv from "../chunk/flv";
 
 enum HandshakeState {
   WAITING_ZERO,
@@ -13,8 +14,14 @@ enum HandshakeState {
   ESTABLISHED
 }
 
+type ReaderOption = {
+  dumpFLV: boolean
+};
+
 export default class Reader {
   #emitter: EventEmitter;
+  #option: ReaderOption;
+
   #handshakeState: HandshakeState = HandshakeState.WAITING_ZERO;
   #time: number = 0;
   #ownRandom: ArrayBuffer = bulidRandom(1528);
@@ -24,8 +31,12 @@ export default class Reader {
 
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
-  public constructor(emitter: EventEmitter) {
+  public constructor(emitter: EventEmitter, option?: Partial<ReaderOption>) {
     this.#emitter = emitter;
+    this.#option = {
+      dumpFLV: false,
+      ... option
+    };
   }
 
   public start() {
@@ -105,6 +116,15 @@ export default class Reader {
       }
       case HandshakeState.ESTABLISHED: {
         for (const info of this.#chunkReciever.readChunk(chunk)) {
+          if (this.#option.dumpFLV) {
+            const toFLV = flv(info);
+            if (toFLV) {
+              this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
+                event: EventTypes.FLV_CHUNK_OUTPUT,
+                chunk: toFLV
+              });
+            }
+          }
           const message = concat(info.message);
 
           if (info.message_type_id === 20) { // AMF0

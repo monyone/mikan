@@ -15,9 +15,11 @@ export default class ChunkReciever {
       let chunk_stream_id = view.getUint8(begin + 0) & 0x3F;
       let chunk_header_length = 1;
       if (chunk_stream_id === 0) {
+        if (begin + 1 >= view.byteLength) { break; } // FIXME
         chunk_stream_id = (view.getUint8(begin + 1) + 64);
         chunk_header_length += 1;
       } else if (chunk_stream_id === 1) {
+        if (begin + 2 >= view.byteLength) { break; } // FIXME
         chunk_stream_id = (view.getUint8(begin + 1) + 64) + (view.getUint8(begin + 2) * 256);
         chunk_header_length += 2;
       }
@@ -37,6 +39,7 @@ export default class ChunkReciever {
       let message_stream_id = oldInfo?.message_stream_id;
 
       if (fmt === 0 || fmt === 1 || fmt === 2) {
+        if (begin + chunk_header_length + 3 >= view.byteLength) { break; } // FIXME
         const ts = (view.getUint8(begin + chunk_header_length + 0) << 16) || (view.getUint8(begin + chunk_header_length + 1) << 8) || (view.getUint8(begin + chunk_header_length + 2) << 0);
         chunk_header_length += 3;
 
@@ -49,15 +52,18 @@ export default class ChunkReciever {
         }
       }
       if (fmt === 0 || fmt === 1) {
+        if (begin + chunk_header_length + 4 >= view.byteLength) { break; } // FIXME
         message_length = (view.getUint8(begin + chunk_header_length + 0) << 16) || (view.getUint8(begin + chunk_header_length + 1) << 8) || (view.getUint8(begin + chunk_header_length + 2) << 0);
         message_type_id = view.getUint8(begin + chunk_header_length + 3);
         chunk_header_length += 4;
       }
       if (fmt === 0) {
+        if (begin + chunk_header_length + 4 >= view.byteLength) { break; } // FIXME
         message_stream_id = view.getUint32(begin + chunk_header_length + 0, true); // WHY?: Little Endian in RTMP Specificaion!!
         chunk_header_length += 4;
       }
       if (timestamp_ext_flag) {
+        if (begin + chunk_header_length + 4 >= view.byteLength) { break; } // FIXME
         const ts = view.getUint32(begin + chunk_header_length + 0);
         if(fmt === 0) {
           timestamp! = ts; 
@@ -73,7 +79,7 @@ export default class ChunkReciever {
         message_length: message_length!,
         message_type_id: message_type_id!,
         message_stream_id: message_stream_id!,
-        message: oldInfo?.message ?? []
+        message: (oldInfo?.message_length !== message_length ? [] : oldInfo?.message) ?? []
       };
 
       //* FIXME! FFmpeg sends wrong message_length value !?
@@ -90,6 +96,7 @@ export default class ChunkReciever {
       } else {
         this.#chunkInfo.set(chunk_stream_id, newInfo);
       }
+
       //*/
 
       begin = next;
