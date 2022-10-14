@@ -118,35 +118,40 @@ export default class Reader {
         if (!same) { break; }
 
         this.#handshakeState = HandshakeState.ESTABLISHED;
-        chunk = (new Uint8Array(chunk.slice(begin))).filter((e) => e !== 0xC3).buffer
+        chunk = chunk.slice(begin);
       }
       case HandshakeState.ESTABLISHED: {
         for (const info of this.#chunkReciever.recieveChunk(chunk, this.#chunkSize)) {
           if (this.#option.dumpFLV) {
-            info.timestamp = Math.max(info.timestamp, this.#privousDTS);
-            const toFLV = flv(info, this.#priviousTagSize);
-            if (toFLV) {
-              if (this.#flvNeedsHeader) {
-                this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
-                  event: EventTypes.FLV_CHUNK_OUTPUT,
-                  chunk: Uint8Array.from([
-                    0x46, 0x4C, 0x56, 1, 4 | 1, 0, 0, 0, 9
-                  ]).buffer
-                });
-                this.#flvNeedsHeader = false;
-              }
-
-              this.#priviousTagSize = toFLV.byteLength - 4;
+            if (this.#flvNeedsHeader) {
               this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
                 event: EventTypes.FLV_CHUNK_OUTPUT,
-                chunk: toFLV
+                chunk: Uint8Array.from([
+                  0x46, 0x4C, 0x56, 1, 4 | 1, 0, 0, 0, 9
+                ]).buffer
               });
-              this.#privousDTS = info.timestamp + 1;
+              this.#flvNeedsHeader = false;
             }
-          }
-          const message = concat(... info.message);
 
-          if (info.message_type_id === 20) { // AMF0
+            info.timestamp = Math.max(info.timestamp, this.#privousDTS);
+            const toFLV = flv(info, this.#priviousTagSize);
+
+            toFLV.forEach((ch) => {
+              this.#priviousTagSize = ch.byteLength - 4;
+              this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
+                event: EventTypes.FLV_CHUNK_OUTPUT,
+                chunk: ch
+              });
+            });
+            this.#privousDTS = info.timestamp + toFLV.length;
+          }
+          
+          const message = concat(... info.message);
+          if (info.message_type_id === 1) {
+            // for chunk size
+            const view = new DataView(message);
+            this.#chunkSize = view.getUint32(0, false);
+          } else if (info.message_type_id === 20) { // AMF0
             const amf = parseAMF(message);
             
             if (!Array.isArray(amf)) { continue; }

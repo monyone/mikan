@@ -24,7 +24,7 @@ export const generateSetPeerBandwidth = (time: number, size: number, limit: numb
   return buildChunk({
     chunk_stream_id: 2,
     timestamp: time,
-    message_type_id: 1,
+    message_type_id: 6,
     message_stream_id: 0,
     message: [message]
   });

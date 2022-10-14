@@ -3,7 +3,6 @@ import { Chunk } from "./parse";
 
 export default class ChunkReciever {
   #chunkInfo: Map<number, Chunk> = new Map<number, Chunk>();
-  #prev: Chunk | null = null;
   #ascendant: ArrayBuffer = new ArrayBuffer(0);
 
   public recieveChunk(chunk: ArrayBuffer, chunkSize: number): Chunk[] {
@@ -13,7 +12,7 @@ export default class ChunkReciever {
     let begin = 0;
     const view = new DataView(chunk);
 
-    while (begin < chunk.byteLength) {      
+    while (begin < chunk.byteLength) {
       const fmt = (view.getUint8(begin + 0) & 0xC0) >> 6;
       let chunk_stream_id = view.getUint8(begin + 0) & 0x3F;
       let chunk_header_length = 1;
@@ -99,7 +98,7 @@ export default class ChunkReciever {
       const newInfo: Chunk = {
         chunk_stream_id,
         timestamp: timestamp!,
-        message_length: message_length!,
+        message_length: (oldInfo?.message ?? []).length > 0 ? oldInfo?.message_length! : message_length!,
         message_type_id: message_type_id!,
         message_stream_id: message_stream_id!,
         message: oldInfo?.message ?? []
