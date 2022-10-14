@@ -4,7 +4,7 @@ import { parseTWO, buildTWO, bulidRandom, parseZERO, buildZERO, parseONE, buildO
 import parseAMF from "../amf0/parser"
 import ChunkReciever from "../chunk/reciever";
 import concat from "../util/binary";
-import { generateConnectResult, generateCreateStreamResult, generateOnFCPublish, generateOnStatusPublish, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
+import { generateConnectResult, generateCreateStreamResult, generateOnFCPublish, generateOnStatusPublish, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../command/reader";
 import flv from "../chunk/flv";
 
 enum HandshakeState {
@@ -27,8 +27,14 @@ export default class Reader {
   #ownRandom: ArrayBuffer = bulidRandom(1528);
 
   #chunkReciever = new ChunkReciever();
+  #chunkSize: number = 128;
   #streamName = '';
 
+  // for FLV
+  #priviousTagSize: number = 0;
+  #privousDTS: number = 0;
+  #flvNeedsHeader: boolean = true;
+  
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
   public constructor(emitter: EventEmitter, option?: Partial<ReaderOption>) {
@@ -115,17 +121,30 @@ export default class Reader {
         chunk = (new Uint8Array(chunk.slice(begin))).filter((e) => e !== 0xC3).buffer
       }
       case HandshakeState.ESTABLISHED: {
-        for (const info of this.#chunkReciever.readChunk(chunk)) {
+        for (const info of this.#chunkReciever.recieveChunk(chunk, this.#chunkSize)) {
           if (this.#option.dumpFLV) {
-            const toFLV = flv(info);
+            info.timestamp = Math.max(info.timestamp, this.#privousDTS);
+            const toFLV = flv(info, this.#priviousTagSize);
             if (toFLV) {
+              if (this.#flvNeedsHeader) {
+                this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
+                  event: EventTypes.FLV_CHUNK_OUTPUT,
+                  chunk: Uint8Array.from([
+                    0x46, 0x4C, 0x56, 1, 4 | 1, 0, 0, 0, 9
+                  ]).buffer
+                });
+                this.#flvNeedsHeader = false;
+              }
+
+              this.#priviousTagSize = toFLV.byteLength - 4;
               this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
                 event: EventTypes.FLV_CHUNK_OUTPUT,
                 chunk: toFLV
               });
+              this.#privousDTS = info.timestamp + 1;
             }
           }
-          const message = concat(info.message);
+          const message = concat(... info.message);
 
           if (info.message_type_id === 20) { // AMF0
             const amf = parseAMF(message);

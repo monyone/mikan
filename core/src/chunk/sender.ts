@@ -1,10 +1,10 @@
 import concat from "../util/binary";
 import { Chunk } from "./parse";
 
-const MESSAGE_SIZE = 4500 - 16; // FIXME: more smaller than better
+const MESSAGE_SIZE = 4500; // FIXME: more smaller than better
 
 export default (chunk: Omit<Chunk, 'message_length'>): ArrayBuffer[] => {
-  const message = concat(chunk.message);
+  const message = concat(... chunk.message);
   const send = [];
 
   const chunk_stream_id = chunk.chunk_stream_id;

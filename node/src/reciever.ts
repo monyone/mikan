@@ -6,13 +6,15 @@ import { EventEmitter, EventTypes, RtmpReader } from '@monyone/mikan';
 const program = new Command();
 program
   .option('-p, --port <number>', 'specify serving port')
+  .option('-f, --flv', 'enable flv output to stdout')
+
 program.parse(process.argv);
 const options = program.opts();
 const port = options.port ?? 6789;
 
 const server = net.createServer((connection) => {
   const emitter = new EventEmitter();
-  const reader = new RtmpReader(emitter);
+  const reader = new RtmpReader(emitter, { dumpFLV: options.flv });
   reader.start();
   
   connection.on("data", (data) => {
@@ -26,11 +28,9 @@ const server = net.createServer((connection) => {
     connection.write(new Uint8Array(chunk));
   });
 
-  /*
   emitter.on(EventTypes.FLV_CHUNK_OUTPUT, ({ chunk }) => {
     process.stdout.write(new Uint8Array(chunk));
   });
-  */
   
   connection.on('close', () => {
     reader.abort();

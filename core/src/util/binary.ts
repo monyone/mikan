@@ -1,4 +1,4 @@
-export default (data: ArrayBuffer[]): ArrayBuffer => {
+export default (... data: ArrayBuffer[]): ArrayBuffer => {
   const bytes = data.reduce((prev, curr) => prev + curr.byteLength, 0);
   const uint8 = new Uint8Array(bytes);
 

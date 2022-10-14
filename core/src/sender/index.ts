@@ -4,8 +4,6 @@ import { parseTWO, buildTWO, bulidRandom, parseZERO, buildZERO, parseONE, buildO
 import parseAMF from "../amf0/parser"
 import ChunkReciever from "../chunk/reciever";
 import concat from "../util/binary";
-import { generateConnectResult, generateCreateStreamResult, generateOnFCPublish, generateOnStatusPublish, generateSetChunkSize, generateSetPeerBandwidth, generateUserStreamBegin, generateWindowAcknowledgementSize } from "../lib/command";
-import flv from "../chunk/flv";
 
 enum HandshakeState {
   INITIAL,
@@ -28,6 +26,7 @@ export default class Sender {
   #recieverRandom: ArrayBuffer | null = null;
 
   #chunkReciever = new ChunkReciever();
+  #chunkSize: number = 128;
 
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
@@ -116,8 +115,8 @@ export default class Sender {
       case HandshakeState.ESTABLISHED: {
         // TODO: NEEDS IMPLEMENTS
 
-        for (const info of this.#chunkReciever.readChunk(chunk)) {
-          const message = concat(info.message);
+        for (const info of this.#chunkReciever.recieveChunk(chunk, this.#chunkSize)) {
+          const message = concat(... info.message);
 
           if (info.message_type_id === 20) { // AMF0
             const amf = parseAMF(message);
