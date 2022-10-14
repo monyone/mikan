@@ -12,7 +12,7 @@ const port = options.port ?? 6789;
 
 const server = net.createServer((connection) => {
   const emitter = new EventEmitter();
-  const reader = new RtmpReader(emitter, { dumpFLV: true });
+  const reader = new RtmpReader(emitter);
   reader.start();
   
   connection.on("data", (data) => {
@@ -26,9 +26,11 @@ const server = net.createServer((connection) => {
     connection.write(new Uint8Array(chunk));
   });
 
+  /*
   emitter.on(EventTypes.FLV_CHUNK_OUTPUT, ({ chunk }) => {
     process.stdout.write(new Uint8Array(chunk));
   });
+  */
   
   connection.on('close', () => {
     reader.abort();
