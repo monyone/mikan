@@ -105,11 +105,9 @@ export default class ChunkReciever {
         message: oldInfo?.message ?? []
       };
 
-      const ffmpeg_combine_flag = message_type_id === 20;
-
       const currrent_total = newInfo.message.reduce((prev, curr) => prev + curr.byteLength, 0);
 
-      const remaining = Math.min(chunk.byteLength - begin, ffmpeg_combine_flag ? Number.POSITIVE_INFINITY : chunkSize + chunk_header_length);
+      const remaining = Math.min(chunk.byteLength - begin, chunkSize + chunk_header_length);
       const needs = chunk_header_length + (newInfo.message_length - currrent_total);
       const next = begin + Math.min(needs, remaining);
       newInfo.message.push(chunk.slice(begin + chunk_header_length, next));
