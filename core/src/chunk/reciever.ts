@@ -98,6 +98,7 @@ export default class ChunkReciever {
       const newInfo: Chunk = {
         chunk_stream_id,
         timestamp: timestamp!,
+        // WHY? ffmpeg overwrite exists message length?
         message_length: (oldInfo?.message ?? []).length > 0 ? oldInfo?.message_length! : message_length!,
         message_type_id: message_type_id!,
         message_stream_id: message_stream_id!,
