@@ -17,9 +17,19 @@ export default class ChunkReciever {
       let chunk_stream_id = view.getUint8(begin + 0) & 0x3F;
       let chunk_header_length = 1;
       if (chunk_stream_id === 0) {
+        if (chunk.byteLength < begin + chunk_header_length + 1) {
+          this.#ascendant = chunk.slice(begin);
+          begin = chunk.byteLength;
+          break;
+        }
         chunk_stream_id = (view.getUint8(begin + 1) + 64);
         chunk_header_length += 1;
       } else if (chunk_stream_id === 1) {
+        if (chunk.byteLength < begin + chunk_header_length + 2) {
+          this.#ascendant = chunk.slice(begin);
+          begin = chunk.byteLength;
+          break;
+        }
         chunk_stream_id = (view.getUint8(begin + 1) + 64) + (view.getUint8(begin + 2) * 256);
         chunk_header_length += 2;
       }
@@ -104,7 +114,6 @@ export default class ChunkReciever {
         message_stream_id: message_stream_id!,
         message: oldInfo?.message ?? []
       };
-
       const currrent_total = newInfo.message.reduce((prev, curr) => prev + curr.byteLength, 0);
 
       const remaining = Math.min(chunk.byteLength - begin, chunkSize + chunk_header_length);

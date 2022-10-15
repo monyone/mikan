@@ -13,6 +13,7 @@ const options = program.opts();
 const port = options.port ?? 6789;
 
 const server = net.createServer((connection) => {
+  connection.setNoDelay(true);
   const emitter = new EventEmitter();
   const reader = new RtmpReader(emitter, { dumpFLV: options.flv });
   reader.start();
