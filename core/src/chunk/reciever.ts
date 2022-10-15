@@ -98,12 +98,6 @@ export default class ChunkReciever {
         chunk_header_length += 4;
       }
 
-      if (chunk.byteLength <= begin + chunk_header_length) {
-        this.#ascendant = chunk.slice(begin);
-        begin = chunk.byteLength;
-        break;
-      }
-
       this.#ascendant = new ArrayBuffer(0);
       const newInfo: Chunk = {
         chunk_stream_id,
@@ -115,10 +109,17 @@ export default class ChunkReciever {
         message: oldInfo?.message ?? []
       };
       const currrent_total = newInfo.message.reduce((prev, curr) => prev + curr.byteLength, 0);
-
-      const remaining = Math.min(chunk.byteLength - begin, chunkSize + chunk_header_length);
+      
+      const remaining = chunk.byteLength - begin;
+      const deliminate = chunkSize + chunk_header_length;
       const needs = chunk_header_length + (newInfo.message_length - currrent_total);
-      const next = begin + Math.min(needs, remaining);
+      if (remaining < Math.min(needs, deliminate)) {
+        this.#ascendant = chunk.slice(begin);
+        begin = chunk.byteLength;
+        break;
+      }
+
+      const next = begin + Math.min(needs, remaining, deliminate);
       newInfo.message.push(chunk.slice(begin + chunk_header_length, next));
 
       const next_total = currrent_total + (next - (begin + chunk_header_length));
