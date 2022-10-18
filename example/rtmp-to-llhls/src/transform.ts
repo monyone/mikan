@@ -54,6 +54,8 @@ export default class FlvToMp2tTransform extends Transform {
 
           const nalus: Buffer[] = [];
           let begin = 0;
+          let hasSPS = false, hasPPS = false;
+          let hasAUD = false; // AVPlayer Needs AUD
           while (begin < data.byteLength) {
             let length = 0;
             for (let i = 0; i < this.#AVCDecoderConfigurationRecord.naluLengthSize; i++) {
@@ -63,13 +65,29 @@ export default class FlvToMp2tTransform extends Transform {
             begin += this.#AVCDecoderConfigurationRecord.naluLengthSize;
 
             const nal_unit_type = data[begin + 0] & 0x1F;
+             
+            if (nal_unit_type === 9) {
+              hasAUD = true;
+            } else if (!hasAUD) {
+              nalus.push(Buffer.from([0, 0, 0, 1, 0x09, 0xF0]));
+              hasAUD = true;
+            }
+
+            if (nal_unit_type === 7) {
+              hasSPS = true;
+            } else if(nal_unit_type === 8) {
+              hasPPS = true;
+            }
+
             if (nal_unit_type === 5) {
-              /*
-              nalus.push(Buffer.from([0, 0, 1]));
-              nalus.push(this.#AVCDecoderConfigurationRecord.sps);
-              nalus.push(Buffer.from([0, 0, 1]));
-              nalus.push(this.#AVCDecoderConfigurationRecord.pps);
-              */
+              if (!hasSPS) {
+                nalus.push(Buffer.from([0, 0, 1]));
+                nalus.push(this.#AVCDecoderConfigurationRecord.sps);
+              }
+              if (!hasPPS) {
+                nalus.push(Buffer.from([0, 0, 1]));
+                nalus.push(this.#AVCDecoderConfigurationRecord.pps);
+              }
               nalus.push(Buffer.from([0, 0, 1]));
               nalus.push(data.slice(begin, begin + length));
             } else {
