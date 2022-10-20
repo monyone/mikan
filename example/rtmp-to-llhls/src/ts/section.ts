@@ -27,10 +27,10 @@ export const buildPAT = (programs: [number, number][]) => {
   return Buffer.concat([
     PAT,
     Buffer.from([
-      (CRC & 0xFF000000) >> 24,
-      (CRC & 0x00FF0000) >> 16,
-      (CRC & 0x0000FF00) >> 8,
-      (CRC & 0x000000FF) >> 0
+      (CRC & 0xFF000000) >>> 24,
+      (CRC & 0x00FF0000) >>> 16,
+      (CRC & 0x0000FF00) >>> 8,
+      (CRC & 0x000000FF) >>> 0
     ])
   ]);
 }
@@ -76,10 +76,10 @@ export const buildPMT = (program_number: number, PCR_PID: number, elements: [num
   return Buffer.concat([
     PMT,
     Buffer.from([
-      (CRC & 0xFF000000) >> 24,
-      (CRC & 0x00FF0000) >> 16,
-      (CRC & 0x0000FF00) >> 8,
-      (CRC & 0x000000FF) >> 0
+      (CRC & 0xFF000000) >>> 24,
+      (CRC & 0x00FF0000) >>> 16,
+      (CRC & 0x0000FF00) >>> 8,
+      (CRC & 0x000000FF) >>> 0
     ])
   ]);
 }

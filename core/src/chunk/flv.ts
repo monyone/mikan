@@ -26,10 +26,10 @@ export default (chunk: Chunk, priviousTagSize: number): ArrayBuffer[] => {
     view.setUint8(4 + 2, (length & 0x00FF00) >> 8);
     view.setUint8(4 + 3, (length & 0x0000FF) >> 0);
     // ts
-    view.setUint8(4 + 4, ((chunk.timestamp + i) & 0x00FF0000) >> 16);
-    view.setUint8(4 + 5, ((chunk.timestamp + i) & 0x0000FF00) >> 8);
-    view.setUint8(4 + 6, ((chunk.timestamp + i) & 0x000000FF) >> 0);
-    view.setUint8(4 + 7, ((chunk.timestamp + i) & 0xFF000000) >> 24);
+    view.setUint8(4 + 4, ((chunk.timestamp + i) & 0x00FF0000) >>> 16);
+    view.setUint8(4 + 5, ((chunk.timestamp + i) & 0x0000FF00) >>> 8);
+    view.setUint8(4 + 6, ((chunk.timestamp + i) & 0x000000FF) >>> 0);
+    view.setUint8(4 + 7, ((chunk.timestamp + i) & 0xFF000000) >>> 24);
     // streamId
     view.setUint8(4 + 8, 0);
     view.setUint8(4 + 9, 0);
