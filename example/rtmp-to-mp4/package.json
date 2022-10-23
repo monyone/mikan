@@ -1,0 +1,32 @@
+{
+  "name": "@monyone/mikan-example-llhls",
+  "private": true,
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "types": "d.ts/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "d.ts/**/*",
+    "src/**/*",
+    "tsconfig.json"
+  ],
+  "author": "monyone <monyone.teihen@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "tsc": "tsc",
+    "build": "npm-run-all clean tsc",
+    "clean": "rimraf dist d.ts"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.14",
+    "@types/node": "16.11.7",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.6.2"
+  },
+  "dependencies": {
+    "@monyone/mikan": "file:../../core",
+    "commander": "^9.2.0"
+  }
+}
