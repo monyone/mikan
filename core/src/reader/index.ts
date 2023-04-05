@@ -142,17 +142,13 @@ export default class Reader {
     // if Established
     if (this.#handshakeState !== HandshakeState.ESTABLISHED) { return; }
 
-    for (const info of this.#chunkReciever.recieveChunk(chunk, this.#chunkSize)) {
+    for (const info of this.#chunkReciever.recieveChunk(chunk)) {
       const message = concat(... info.message);
 
       if (info.message_stream_id === 0) { // system message
-        if (info.message_type_id === 1) {
-          // for chunk size
-          const view = new DataView(message);
-          this.#chunkSize = view.getUint32(0, false);
-        } else if (info.message_type_id === 20) { // AMF0
+        if (info.message_type_id === 20) { // AMF0
           const amf = parseAMF(message);
-          
+
           if (!Array.isArray(amf)) { continue; }
           const [name, transaction_id, ... objs] = amf;
 
@@ -170,7 +166,7 @@ export default class Reader {
                   required: this.#option.app,
                   actual: app
                 });
-                
+
                 return;
               }
               this.#app = app;
@@ -206,7 +202,7 @@ export default class Reader {
                   chunk
                 });
               }
-              
+
               // result
               for (const chunk of generateConnectResult(this.#time, transaction_id)) {
                 this.#emitter.emit(EventTypes.RTMP_CHUNK_SEND, {
@@ -282,7 +278,7 @@ export default class Reader {
 
           if (!Array.isArray(amf)) { continue; }
           const [name, transaction_id, ... objs] = amf;
-          
+
           switch(name) {
             case 'publish': {
               if (this.#connectionState !== ConnectionState.WAITING_PUBLISH) { return; }
@@ -300,7 +296,7 @@ export default class Reader {
                 streamKey: this.#streamKey,
                 messageId: info.message_stream_id,
               });
-              
+
               this.#connectionState = ConnectionState.PUBLISHED;
               break;
             }
@@ -309,7 +305,7 @@ export default class Reader {
       } else if (this.#connectionState === ConnectionState.PUBLISHED) {
         // FIXME: MULTI MESSAGE STREAMING (Message Stream Recieving)
         if (!this.#option.dumpFLV) { return; }
-        
+
         if (this.#flvNeedsHeader) {
           this.#emitter.emit(EventTypes.FLV_CHUNK_OUTPUT, {
             event: EventTypes.FLV_CHUNK_OUTPUT,
@@ -319,7 +315,7 @@ export default class Reader {
           });
           this.#flvNeedsHeader = false;
         }
-  
+
         info.timestamp = Math.max(info.timestamp, this.#privousDTS);
         const toFLV = flv(info, this.#priviousTagSize);
 

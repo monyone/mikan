@@ -244,7 +244,7 @@ export const mp4a = (track: Pick<Track, 'config' | 'channelCount' | 'sampleRate'
     ... toUint16BE(channelCount), ... toUint16BE(0x10), // channelCount(2) +  sampleSize(2)
     ... fill(0, 4), //  reserved(4)
     ... toUint16BE(sampleRate), ... fill(0, 2) // // Audio sample rate
-  ]).buffer,);
+  ]).buffer, esds(track), Uint8Array.from([0x06, 0x01, 0x02]).buffer);
 };
 
 export const esds = (track: Pick<Track, 'config'>) => {

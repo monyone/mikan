@@ -26,7 +26,6 @@ export default class Sender {
   #recieverRandom: ArrayBuffer | null = null;
 
   #chunkReciever = new ChunkReciever();
-  #chunkSize: number = 128;
 
   readonly #onRtmpChunkRecievedHandler = this.#onRtmpChunkRecieved.bind(this);
 
@@ -62,7 +61,7 @@ export default class Sender {
   #onRtmpChunkRecieved({ chunk }: Events[typeof EventTypes.RTMP_CHUNK_RECIEVED]) {
     let begin = 0;
     switch (this.#handshakeState) {
-      case HandshakeState.INITIAL: { break;} 
+      case HandshakeState.INITIAL: { break; }
       case HandshakeState.WAITING_ZERO: {
         if (chunk.byteLength < begin + 1) { break; }
         parseZERO(chunk.slice(begin, begin + 1));
@@ -87,7 +86,7 @@ export default class Sender {
 
         const oneView = new DataView(this.#ownRandom!);
         const twoView = new DataView(TWO.random);
-        
+
         let same = true;
         if (oneView.byteLength !== twoView.byteLength) { same = false; }
         if (same) {
@@ -115,17 +114,17 @@ export default class Sender {
       case HandshakeState.ESTABLISHED: {
         // TODO: NEEDS IMPLEMENTS
 
-        for (const info of this.#chunkReciever.recieveChunk(chunk, this.#chunkSize)) {
+        for (const info of this.#chunkReciever.recieveChunk(chunk)) {
           const message = concat(... info.message);
 
           if (info.message_type_id === 20) { // AMF0
             const amf = parseAMF(message);
-            
+
             if (!Array.isArray(amf)) { continue; }
             const [name, transaction_id, ... objs] = amf;
 
             switch(name) {
-              default: break; 
+              default: break;
             }
           }
         }

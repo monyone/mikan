@@ -2,13 +2,14 @@ import concat from "../util/binary";
 import { Chunk } from "./parse";
 
 export default class ChunkReciever {
+  #chunkSize: number = 128;
   #chunkInfo: Map<number, Chunk> = new Map<number, Chunk>();
   #ascendant: ArrayBuffer = new ArrayBuffer(0);
 
-  public recieveChunk(chunk: ArrayBuffer, chunkSize: number): Chunk[] {
+  public recieveChunk(chunk: ArrayBuffer): Chunk[] {
     chunk = concat(this.#ascendant, chunk)
     const messages: Chunk[] = [];
-    
+
     let begin = 0;
     const view = new DataView(chunk);
 
@@ -109,9 +110,9 @@ export default class ChunkReciever {
         message: oldInfo?.message ?? []
       };
       const currrent_total = newInfo.message.reduce((prev, curr) => prev + curr.byteLength, 0);
-      
+
       const remaining = chunk.byteLength - begin;
-      const deliminate = chunkSize + chunk_header_length;
+      const deliminate = this.#chunkSize + chunk_header_length;
       const needs = chunk_header_length + (newInfo.message_length - currrent_total);
       if (remaining < Math.min(needs, deliminate)) {
         this.#ascendant = chunk.slice(begin);
@@ -125,11 +126,17 @@ export default class ChunkReciever {
       const next_total = currrent_total + (next - (begin + chunk_header_length));
 
       if (next_total >= newInfo.message_length) {
-        messages.push(newInfo);
-        this.#chunkInfo.set(chunk_stream_id, {
-          ... newInfo,
-          message: []
-        });
+        if (newInfo.message_stream_id === 0 && newInfo.message_type_id === 1) {
+          // for chunk size
+          const view = new DataView(concat(... newInfo.message));
+          this.#chunkSize = view.getUint32(0, false);
+        } else {
+          messages.push(newInfo);
+          this.#chunkInfo.set(chunk_stream_id, {
+            ... newInfo,
+            message: []
+          });
+        }
       } else {
         this.#chunkInfo.set(chunk_stream_id, newInfo);
       }
